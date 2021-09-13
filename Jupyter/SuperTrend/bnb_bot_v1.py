@@ -24,27 +24,20 @@ def tr(data):
     data['high-low'] = abs(data['high'] - data['low'])
     data['high-pc'] = abs(data['high'] - data['previous_close'])
     data['low-pc'] = abs(data['low'] - data['previous_close'])
-
     tr = data[['high-low', 'high-pc', 'low-pc']].max(axis=1)
-
     return tr
-
 def atr(data, period):
     data['tr'] = tr(data)
     atr = data['tr'].rolling(period).mean()
-
     return atr
-
 def supertrend(df, period=7, atr_multiplier=3):
     hl2 = (df['high'] + df['low']) / 2
     df['atr'] = atr(df, period)
     df['upperband'] = hl2 + (atr_multiplier * df['atr'])
     df['lowerband'] = hl2 - (atr_multiplier * df['atr'])
     df['in_uptrend'] = True
-
     for current in range(1, len(df.index)):
         previous = current - 1
-
         if df['close'][current] > df['upperband'][previous]:
             df['in_uptrend'][current] = True
         elif df['close'][current] < df['lowerband'][previous]:
@@ -57,14 +50,13 @@ def supertrend(df, period=7, atr_multiplier=3):
 
             if not df['in_uptrend'][current] and df['upperband'][current] > df['upperband'][previous]:
                 df['upperband'][current] = df['upperband'][previous]
-        
     return df
 
 in_position = False
-ticker = 'DOGE/USD'
-trade_amount = 100
+ticker = 'BNB/USD'
+trade_amount = 20
 bar = exchange.fetch_ohlcv(f'{ticker}', timeframe='1m', limit=5)
-order_size = int(trade_amount/bar[4][1]-(.05*(trade_amount/bar[4][1]))) #Trades $100.
+order_size = int(trade_amount/bar[4][1]-(.05*(trade_amount/bar[4][1]))) #Trades $1000.
 
 #Decision maker.
 def check_buy_sell_signals(df):
@@ -84,7 +76,6 @@ def check_buy_sell_signals(df):
             in_position = True
         else:
             print("Already in position, no task.")
-    
     if df['in_uptrend'][previous_row_index] and not df['in_uptrend'][last_row_index]:
         if in_position: 
             print("Changed to downtrend - Sell")
@@ -96,6 +87,7 @@ def check_buy_sell_signals(df):
             in_position = False
         else:
             print("No selling position, no task.")
+            
 #Run
 def run_bot():
     print(f"\n\nFetching new bars for {datetime.now().isoformat()}")

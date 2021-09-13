@@ -60,68 +60,52 @@ def supertrend(df, period=7, atr_multiplier=3):
         
     return df
 
-in_position = True
-ticker = 'XTZ/USD'
+in_position = False
+ticker = input("Insert ticker (XXX/YYY): ")
+trade_amount = int(input("Enter amount tradeable: "))
 bar = exchange.fetch_ohlcv(f'{ticker}', timeframe='1m', limit=5)
-order_size = int(11/bar[4][1]-(.05*(11/bar[4][1]))) # Meet $10 order min_notional
+order_size = int(trade_amount/bar[4][1]-(.05*(trade_amount/bar[4][1]))) #Trades $100.
 
+#Decision maker.
 def check_buy_sell_signals(df):
     global in_position,order_size,ticker
-
-    print(f"Analyzing {ticker} data... In_position:",in_position)
-    print(df.tail(3))
+    print("Analyzing",ticker,"data... \nIn_position:",in_position,'\n')
+    print(df.tail(2)[['timestamp','open','in_uptrend']])
     last_row_index = len(df.index) - 1
     previous_row_index = last_row_index - 1
-
     if not df['in_uptrend'][previous_row_index] and df['in_uptrend'][last_row_index]:
         print("Changed to uptrend - Buy")
-        
         if not in_position:
-
             order = exchange.create_market_buy_order(f'{ticker}',order_size)
             print('Status:'+order['info']['status'],
                   'Price:'+order['trades'][0]['info']['price'],
                   'Quantity:'+order['info']['executedQty'],
                   'Type:'+order['info']['side'])
-            
-            #fake_order = exchange.fetch_ohlcv(f'{ticker}', timeframe='1m', limit=1)#
-            #print("Fake-buy here:",fake_order)
             in_position = True
         else:
             print("Already in position, no task.")
     
     if df['in_uptrend'][previous_row_index] and not df['in_uptrend'][last_row_index]:
         if in_position: 
-            #If in position && previous purchase price << current/market price.
             print("Changed to downtrend - Sell")
-
             order = exchange.create_market_sell_order(f'{ticker}',order_size)
             print('Status:'+order['info']['status'],
                   'Price:'+order['trades'][0]['info']['price'],
                   'Quantity:'+order['info']['executedQty'],
                   'Type:'+order['info']['side'])
             in_position = False
-            
-            #fake_order = exchange.fetch_ohlcv(f'{ticker}', timeframe='1m', limit=1)#
-            #print("Fake-sell here:",fake_order)
         else:
             print("No selling position, no task.")
-            
+#Run
 def run_bot():
-    print(f"\nFetching new bars for {datetime.now().isoformat()}")
-    bars = exchange.fetch_ohlcv(f'{ticker}', timeframe='1m', limit=50)
+    print(f"\n\nFetching new bars for {datetime.now().isoformat()}")
+    bars = exchange.fetch_ohlcv(f'{ticker}', timeframe='3m', limit=100)
     df = pd.DataFrame(bars[:-1], columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
     df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
-
     supertrend_data = supertrend(df)
-    
     check_buy_sell_signals(supertrend_data)
     print()
-
-
-schedule.every(15).seconds.do(run_bot)
-
-
+schedule.every(1).minutes.do(run_bot)
 while True:
     schedule.run_pending()
     time.sleep(1)
