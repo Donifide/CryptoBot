@@ -70,7 +70,7 @@ order_size = int(trade_amount/bar[4][1]-(.05*(trade_amount/bar[4][1]))) #Trades 
 def check_buy_sell_signals(df):
     global in_position,order_size,ticker
     print("Analyzing",ticker,"data... \nIn_position:",in_position,'\n')
-    print(df.tail(2)[['timestamp','open','in_uptrend']])
+    print(df.tail(3)[['timestamp','open','in_uptrend']])
     last_row_index = len(df.index) - 1
     previous_row_index = last_row_index - 1
     if not df['in_uptrend'][previous_row_index] and df['in_uptrend'][last_row_index]:
@@ -99,7 +99,7 @@ def check_buy_sell_signals(df):
 #Run
 def run_bot():
     print(f"\n\nFetching new bars for {datetime.now().isoformat()}")
-    bars = exchange.fetch_ohlcv(f'{ticker}', timeframe='3m', limit=100)
+    bars = exchange.fetch_ohlcv(f'{ticker}', timeframe='1m', limit=100)
     df = pd.DataFrame(bars[:-1], columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
     df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
     supertrend_data = supertrend(df)

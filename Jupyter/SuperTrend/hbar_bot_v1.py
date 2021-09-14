@@ -48,18 +48,30 @@ def supertrend(df, period=7, atr_multiplier=3):
                 df['upperband'][current] = df['upperband'][previous]
     return df
 
-#Parameters
-in_position = False
-ticker = 'HBAR/USD'
-trade_amount = 1000
-bar = exchange.fetch_ohlcv(f'{ticker}', timeframe='1m', limit=5)
-order_size = int(trade_amount/bar[4][1]-(.05*(trade_amount/bar[4][1]))) #Trades $1000.
+####Parameters for HARD-VALUE TRADE AMOUNT####
+#in_position = False
+#ticker = 'HBAR/USD'
+#trade_amount = 1000
+#bar = exchange.fetch_ohlcv(f'{ticker}', timeframe='1m', limit=5)
+#order_size = int(trade_amount/bar[4][1]-(.05*(trade_amount/bar[4][1]))) #Trades $1000.
+
+#Parameters for POSITION-DEPENDENT TRADE AMOUNT
+ticker = 'HBAR/USD' #input("Insert ticker (XXX/USD): ")+'/USD'
+
+#Get position_val
+bal = pd.DataFrame(exchange.fetch_balance()['info']['balances'])
+bal['free'] = pd.to_numeric(bal['free'])
+bal = bal[bal.free!=0].drop(columns='locked').reset_index(drop=True)
+bal = bal[bal['asset']==ticker[:4]].reset_index(drop=True).free[0]
+in_position = bal>0
+  
+order_size = int(bal*0.50) #Percentage of dedicated trading value.
 
 #Decision maker.
 def check_buy_sell_signals(df):
     global in_position,order_size,ticker
     print("Analyzing",ticker,"data... \nIn_position:",in_position,'\n')
-    print(df.tail(2)[['timestamp','open','in_uptrend']])
+    print(df.tail(3)[['timestamp','open','in_uptrend']])
     last_row_index = len(df.index) - 1
     previous_row_index = last_row_index - 1
     if not df['in_uptrend'][previous_row_index] and df['in_uptrend'][last_row_index]:
@@ -94,7 +106,7 @@ def run_bot():
     supertrend_data = supertrend(df)
     check_buy_sell_signals(supertrend_data)
     print()
-schedule.every(1).minutes.do(run_bot)
+schedule.every(30).seconds.do(run_bot)
 while True:
     schedule.run_pending()
     time.sleep(1)

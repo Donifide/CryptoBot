@@ -1,17 +1,16 @@
-import ccxt
+#Unpack necessities
+from datetime import datetime
+import pandas as pd
+import numpy as np
 import my_config
 import schedule
-import pandas as pd
-pd.set_option('display.max_rows', None)
+import time
+import ccxt
 
 import warnings
 warnings.filterwarnings('ignore')
 
-import numpy as np
-from datetime import datetime
-import time
-
-#Elimanates time/order issues
+#Elimanates time/order issues, not really sure why this works...
 ccxt.binanceus({ 'options':{ 'adjustForTimeDifference':True}})
 
 exchange = ccxt.binanceus({
@@ -19,6 +18,7 @@ exchange = ccxt.binanceus({
 "secret": my_config.BINANCE_SECRET,
 'enableRateLimit': True})
 
+#Super trend formula.
 def tr(data):
     data['previous_close'] = data['close'].shift(1)
     data['high-low'] = abs(data['high'] - data['low'])
@@ -60,17 +60,32 @@ def supertrend(df, period=7, atr_multiplier=3):
         
     return df
 
-in_position = False
-ticker = input("Insert ticker (XXX/YYY): ")
-trade_amount = int(input("Enter amount tradeable: "))
-bar = exchange.fetch_ohlcv(f'{ticker}', timeframe='1m', limit=5)
-order_size = int(trade_amount/bar[4][1]-(.05*(trade_amount/bar[4][1]))) #Trades $100.
+####Parameters for HARD-VALUE TRADE AMOUNT####
+#in_position = False
+#ticker = 'HBAR/USD'
+#trade_amount = 1000
+#bar = exchange.fetch_ohlcv(f'{ticker}', timeframe='1m', limit=5)
+#order_size = int(trade_amount/bar[4][1]-(.05*(trade_amount/bar[4][1]))) #Trades $1000.
+
+#Parameters for POSITION-DEPENDENT TRADE AMOUNT
+ticker = input("Insert ticker (XXX/USD): ")+'/USD'
+
+#Get position_val
+bal = pd.DataFrame(exchange.fetch_balance()['info']['balances'])
+bal['free'] = pd.to_numeric(bal['free'])
+bal = bal[bal.free!=0].drop(columns='locked').reset_index(drop=True)
+bal = bal[bal['asset']==ticker[:4].replace('/','')].reset_index(drop=True).free[0]
+in_position = int(bal)>0
+
+#Percentage of dedicated trading value
+perc = int(input("Percentage of tradeable amount: "))/100
+order_size = int(bal*perc)
 
 #Decision maker.
 def check_buy_sell_signals(df):
     global in_position,order_size,ticker
     print("Analyzing",ticker,"data... \nIn_position:",in_position,'\n')
-    print(df.tail(2)[['timestamp','open','in_uptrend']])
+    print(df.tail(3)[['timestamp','open','in_uptrend']])
     last_row_index = len(df.index) - 1
     previous_row_index = last_row_index - 1
     if not df['in_uptrend'][previous_row_index] and df['in_uptrend'][last_row_index]:
@@ -96,7 +111,8 @@ def check_buy_sell_signals(df):
             in_position = False
         else:
             print("No selling position, no task.")
-#Run
+
+#Run le bot.
 def run_bot():
     print(f"\n\nFetching new bars for {datetime.now().isoformat()}")
     bars = exchange.fetch_ohlcv(f'{ticker}', timeframe='3m', limit=100)
@@ -105,7 +121,7 @@ def run_bot():
     supertrend_data = supertrend(df)
     check_buy_sell_signals(supertrend_data)
     print()
-schedule.every(1).minutes.do(run_bot)
+schedule.every(30).seconds.do(run_bot)
 while True:
     schedule.run_pending()
     time.sleep(1)

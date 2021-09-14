@@ -56,7 +56,7 @@ in_position = False
 ticker = 'BNB/USD'
 trade_amount = 20
 bar = exchange.fetch_ohlcv(f'{ticker}', timeframe='1m', limit=5)
-order_size = int(trade_amount/bar[4][1]-(.05*(trade_amount/bar[4][1]))) #Trades $1000.
+order_size = float(trade_amount/bar[4][1]-(.05*(trade_amount/bar[4][1]))) #Trades $1000.
 
 #Decision maker.
 def check_buy_sell_signals(df):
