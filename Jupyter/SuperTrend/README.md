@@ -17,7 +17,7 @@ Although our team is working very hard to get the fully user-friendly app deploy
 1. Latest Python (3.9.7)
 2. Jupyter Notebook - Anaconda (mini-conda will certainly suffice)
 3. Binance.US crypto brokerage account. (API_KEY, API_SECRET) 
-4. 
+4. Lastly, you'll need this repository. 
 
 ### SuperTrend - Data :computer:
 
