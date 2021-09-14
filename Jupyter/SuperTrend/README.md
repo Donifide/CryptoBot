@@ -10,6 +10,15 @@ The purpose of this repository is to document the development of our very first 
 2. Trade Strategy Class
 3. Execution Class
 
+### What's Needed?
+
+Although our team is working very hard to get the fully user-friendly app deployed, there will still be plenty of time to test the bot on your own as we work through our goals and plans for the future. Feel free to fork, star, and/or watch for any of our updates here on GitHub. Here's what you'll currently need in order to execute the bot locally on your machine. (An introductory Python crash course probably wouldn't hurt.) If you do run, we seek your inputs, suggestions, and ideas that you can prove have a place in our code. Whether it's to help the bot run more efficiently or how we can better scale, your thoughts are welcome! This product is far from perfect, but with your support and growing interest we feel even more encouraged to get this out and running as smoothly as we can. Don't hesitate to contact us if there's anything we can do to help: contact@dascient.com
+
+1. Latest Python (3.9.7)
+2. Jupyter Notebook - Anaconda (mini-conda will certainly suffice)
+3. Binance.US crypto brokerage account. (API_KEY, API_SECRET) 
+4. 
+
 ### SuperTrend - Data :computer:
 
 This class will consist of a CCXT connection into Binance.US WebSocket interface that will feed live cryptocurrency data in the form of candle sticks; Open, High, Low, Close (OHLC).
