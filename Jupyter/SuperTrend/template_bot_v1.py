@@ -109,7 +109,7 @@ def check_buy_sell_signals(df):
         price = bar[-1][1]
         print("Changed to downtrend.")
         try:
-            if in_position and price > float(buys[len(buys)-1]['Price'])+float(buys[len(buys)-1]['Price'])*0.011: #Ensures sell price is 101.1% avg.price
+            if in_position and price > buys[len(buys)-1]['Price']+buys[len(buys)-1]['Price']*0.011: #Ensures sell price is 101.1% avg.price
                 print("Purchase price < current_market_price - Sell.")
                 order = exchange.create_market_sell_order(f'{ticker}',order_size)
                 print('Status:'+order['info']['status'],
