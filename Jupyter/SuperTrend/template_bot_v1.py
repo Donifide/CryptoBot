@@ -81,7 +81,6 @@ def check_buy_sell_signals(df):
     
     print("Analyzing",ticker,"data... ")
     print(df.tail(3)[['timestamp','open','in_uptrend']])
-    print("Balance: $",bal*bar[-1][1])
     
     last_row_index = len(df.index) - 1
     previous_row_index = last_row_index - 1
@@ -93,17 +92,22 @@ def check_buy_sell_signals(df):
             print('Status:'+order['info']['status'],
                   'Price:'+order['trades'][0]['info']['price'],
                   'Quantity:'+order['info']['executedQty'],
-                  'Type:'+order['info']['side'])  
+                  'Type:'+order['info']['side'])
             buys.append({'Date':datetime.now().isoformat(),
-                              'Status':order['info']['status'],
-                              'Price':order['trades'][0]['info']['price'],
-                              'Quantity':order['info']['executedQty'],
-                              'Type':order['info']['side']})   
+                         'Ticker':ticker,
+                         'Status':order['info']['status'],
+                         'Price':order['trades'][0]['info']['price'],
+                         'Quantity':order['info']['executedQty'],
+                         'Type':order['info']['side']})
+            pd.DataFrame(buys).to_csv(f"{ticker}_buy_orders.csv",index=True)
             in_position = True
         else:
             print("Currently in position, no task.")
-            print("Previous purchase price:",buys[len(buys)-1]['Price'])
-    
+            try:
+                print("Previous purchase price:",buys[len(buys)-1]['Price'])
+            except:
+                pass
+
     if df['in_uptrend'][previous_row_index] and not df['in_uptrend'][last_row_index]:
         bar = exchange.fetch_ohlcv(f'{ticker}', timeframe="5m", limit=5)
         price = bar[-1][1]
@@ -117,13 +121,15 @@ def check_buy_sell_signals(df):
                       'Quantity:'+order['info']['executedQty'],
                       'Type:'+order['info']['side'])
                 sells.append({'Date':datetime.now().isoformat(),
+                              'Ticker':ticker,
                               'Status':order['info']['status'],
                               'Price':order['trades'][0]['info']['price'],
                               'Quantity':order['info']['executedQty'],
-                              'Type':order['info']['side']}) 
+                              'Type':order['info']['side']})
+                pd.DataFrame(sells).to_csv(f"{ticker}_sell_orders.csv",index=True)
                 in_position = False
             else:
-                print("No selling position, no task.")
+                print("Previous purchase price < current price, no task.")
         except:
             if in_position and price > bar[0][3]: #Ensures sell price > low price in t-25mins
                 
@@ -134,13 +140,15 @@ def check_buy_sell_signals(df):
                       'Quantity:'+order['info']['executedQty'],
                       'Type:'+order['info']['side'])
                 sells.append({'Date':datetime.now().isoformat(),
+                              'Ticker':ticker,
                               'Status':order['info']['status'],
                               'Price':order['trades'][0]['info']['price'],
                               'Quantity':order['info']['executedQty'],
-                              'Type':order['info']['side']}) 
+                              'Type':order['info']['side']})
+                pd.DataFrame(sells).to_csv(f"{ticker}_sell_orders.csv",index=True)
                 in_position = False
             else:
-                print("No selling position, no task.")
+                print("No previous purchase price & current price > recent past prices, no task.")
 
 #Run le bot.
 def run_bot():
@@ -151,8 +159,14 @@ def run_bot():
     df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
     supertrend_data = supertrend(df)
     check_buy_sell_signals(supertrend_data)
-    pd.DataFrame(buys).to_csv('buy_orders.csv',index=True)
-    pd.DataFrame(sells).to_csv('sell_orders.csv',index=True)
+    
+    #Prints out current balance info.
+    bal = pd.DataFrame(exchange.fetch_balance()['info']['balances'])
+    bal['free'] = pd.to_numeric(bal['free'])
+    bal = bal[bal.free!=0].drop(columns='locked').reset_index(drop=True)
+    bal = bal[bal['asset']==ticker[:4].replace('/','')].reset_index(drop=True).free[0]
+    print("\nBalance: $",bal*bars[-1][1],"Position: ",bal,"\n")
+
 schedule.every(4).minutes.do(run_bot)
 while True:
     schedule.run_pending()
