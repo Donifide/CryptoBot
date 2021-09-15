@@ -61,7 +61,7 @@ def supertrend(df, period=7, atr_multiplier=3):
 ####Parameters for INDEPENDENT HARD-VALUE TRADE AMOUNT####
 ticker = str(input("Insert ticker: XXXX ")+'/USD')
 trade_amount = int(input("Trade amount: $"))
-timeframe = "5m" #str(input("Candlestick timeframe: (1m,3m,5m,10m,15m,30m,1d) "))
+timeframe = "5m" #str(input("Candlestick timeframe: (1m,3m,5m,15m,30m,1h,1d) "))
 
 bal = pd.DataFrame(exchange.fetch_balance()['info']['balances'])
 bal['free'] = pd.to_numeric(bal['free'])

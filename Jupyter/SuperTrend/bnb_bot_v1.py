@@ -55,11 +55,11 @@ def supertrend(df, period=7, atr_multiplier=3):
 in_position = False
 ticker = 'BNB/USD'
 trade_amount = 30
-bar = exchange.fetch_ohlcv(f'{ticker}', timeframe='1d', limit=5) #Timeframe(1m,3m,5m,10m,15m,30m,1d) "))
+bar = exchange.fetch_ohlcv(f'{ticker}', timeframe='1m', limit=5) #Timeframe(1m,3m,5m,15m,30m,1h,1d) "))
 order_size = float(trade_amount/bar[4][1]-(.05*(trade_amount/bar[4][1])))
 
 #timeframe
-tf = "3h"
+tf = "2h"
 
 #Collects previous orders.
 buys,sells = [],[]
@@ -113,7 +113,7 @@ def check_buy_sell_signals(df):
                          'Price':order['trades'][0]['info']['price'],
                          'Quantity':order['info']['executedQty'],
                          'Type':order['info']['side']})
-                #pd.DataFrame(sells).to_csv(f"{ticker}_sell_orders.csv",index=True)
+                pd.DataFrame(sells).to_csv(f"{ticker}_sell_orders.csv",index=True)
                 in_position = False
             else:
                 print("Previous purchase price < current price, no task.")
@@ -131,7 +131,7 @@ def check_buy_sell_signals(df):
                          'Price':order['trades'][0]['info']['price'],
                          'Quantity':order['info']['executedQty'],
                          'Type':order['info']['side']})
-                #pd.DataFrame(sells).to_csv(f"{ticker}_sell_orders.csv",index=True)
+                pd.DataFrame(sells).to_csv(f"{ticker}_sell_orders.csv",index=True)
                 in_position = False
             else:
                 print("No previous purchase price & current price > recent past prices, no task.")
@@ -153,7 +153,7 @@ def run_bot():
     bal = bal[bal['asset']==ticker[:4].replace('/','')].reset_index(drop=True).free[0]
     print("\nBalance: $",bal*bars[-1][1],"Position: ",bal,"\n")
     
-schedule.every(170).minutes.do(run_bot)
+schedule.every(110).minutes.do(run_bot)
 while True:
     schedule.run_pending()
     time.sleep(1)
