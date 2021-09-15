@@ -132,6 +132,7 @@ def run_bot():
     df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
     supertrend_data = supertrend(df)
     check_buy_sell_signals(supertrend_data)
+    
 schedule.every(4).minutes.do(run_bot)
 while True:
     schedule.run_pending()
