@@ -49,29 +49,31 @@ def supertrend(df, period=7, atr_multiplier=3):
     return df
 
 ####Parameters for HARD-VALUE TRADE AMOUNT####
-#in_position = False
-#ticker = 'HBAR/USD'
-#trade_amount = 1000
-#bar = exchange.fetch_ohlcv(f'{ticker}', timeframe='1m', limit=5)
-#order_size = int(trade_amount/bar[4][1]-(.05*(trade_amount/bar[4][1]))) #Trades $1000.
-
-#Parameters for POSITION-DEPENDENT TRADE AMOUNT
-ticker = 'HBAR/USD' #input("Insert ticker (XXX/USD): ")+'/USD'
-
 #Get position_val
+ticker = 'HBAR/USD'
 bal = pd.DataFrame(exchange.fetch_balance()['info']['balances'])
 bal['free'] = pd.to_numeric(bal['free'])
 bal = bal[bal.free!=0].drop(columns='locked').reset_index(drop=True)
 bal = bal[bal['asset']==ticker[:4]].reset_index(drop=True).free[0]
 in_position = bal>0
-  
-order_size = int(bal*0.50) #Percentage of dedicated trading value.
+trade_amount = 300 #Trades $8000.
+bar = exchange.fetch_ohlcv(f'{ticker}', timeframe='1m', limit=5)
+order_size = int(trade_amount/bar[4][1]-(.05*(trade_amount/bar[4][1]))) 
+
+#order_size = int(bal*0.50) #Percentage of dedicated trading value.
+
+#timeframe
+tf = "15m"
+
+#Collects previous orders.
+buys,sells = [],[]
 
 #Decision maker.
 def check_buy_sell_signals(df):
-    global in_position,order_size,ticker
+    global in_position,order_size,ticker,tf,trade_amount,bal
     print("Analyzing",ticker,"data... \nIn_position:",in_position,'\n')
     print(df.tail(3)[['timestamp','open','in_uptrend']])
+    print("Balance: ",bal)
     last_row_index = len(df.index) - 1
     previous_row_index = last_row_index - 1
     if not df['in_uptrend'][previous_row_index] and df['in_uptrend'][last_row_index]:
@@ -81,32 +83,47 @@ def check_buy_sell_signals(df):
             print('Status:'+order['info']['status'],
                   'Price:'+order['trades'][0]['info']['price'],
                   'Quantity:'+order['info']['executedQty'],
-                  'Type:'+order['info']['side'])
+                  'Type:'+order['info']['side'])  
+            buys.append({'Status':order['info']['status'],
+                  'Price':order['trades'][0]['info']['price'],
+                  'Quantity':order['info']['executedQty'],
+                  'Type':order['info']['side']})  
             in_position = True
         else:
-            print("Already in position, no task.")
+            print("Currently in position, no task.")
+            print("Previous purchase price:",buys[len(buys)-1]['Price'])
     
     if df['in_uptrend'][previous_row_index] and not df['in_uptrend'][last_row_index]:
-        if in_position: 
+        bar = exchange.fetch_ohlcv(f'{ticker}', timeframe=timeframe, limit=5)
+        price = bar[-1][1]
+        if in_position and price > buys[len(buys)-1]['Price']:
             print("Changed to downtrend - Sell")
             order = exchange.create_market_sell_order(f'{ticker}',order_size)
             print('Status:'+order['info']['status'],
                   'Price:'+order['trades'][0]['info']['price'],
                   'Quantity:'+order['info']['executedQty'],
                   'Type:'+order['info']['side'])
+            sells.append({'Status':order['info']['status'],
+                  'Price':order['trades'][0]['info']['price'],
+                  'Quantity':order['info']['executedQty'],
+                  'Type':order['info']['side']}) 
             in_position = False
         else:
             print("No selling position, no task.")
-#Run
+#Run le bot.
 def run_bot():
     print(f"\n\nFetching new bars for {datetime.now().isoformat()}")
-    bars = exchange.fetch_ohlcv(f'{ticker}', timeframe='3m', limit=100)
+    print("In position:", in_position,
+          "; Balance: $",bal*bar[-1][1],
+          "; Timeframe: ",timeframe,
+          "; Trade amount: ",trade_amount)
+    bars = exchange.fetch_ohlcv(f'{ticker}', timeframe=tf, limit=100)
     df = pd.DataFrame(bars[:-1], columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
     df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
     supertrend_data = supertrend(df)
     check_buy_sell_signals(supertrend_data)
-    print()
-schedule.every(30).seconds.do(run_bot)
+    print("Timeframe: ",tf,"\nTrade amount: ",trade_amount)
+schedule.every(13).minutes.do(run_bot)
 while True:
     schedule.run_pending()
     time.sleep(1)

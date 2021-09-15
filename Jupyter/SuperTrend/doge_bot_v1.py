@@ -99,7 +99,7 @@ def check_buy_sell_signals(df):
 #Run
 def run_bot():
     print(f"\n\nFetching new bars for {datetime.now().isoformat()}")
-    bars = exchange.fetch_ohlcv(f'{ticker}', timeframe='1m', limit=100)
+    bars = exchange.fetch_ohlcv(f'{ticker}', timeframe='5m', limit=100)
     df = pd.DataFrame(bars[:-1], columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
     df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
     supertrend_data = supertrend(df)
