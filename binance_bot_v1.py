@@ -25,8 +25,8 @@ min_sell_price=input("Minimum sell price: ")
 
 #Create data collection dataframes
 buys,sells = [],[]
-pd.DataFrame(buys).to_csv(f"{ticker}_buy_orders_{name}.csv",index=True)
-pd.DataFrame(sells).to_csv(f"{ticker}_sell_orders_{name}.csv",index=True)
+#pd.DataFrame(buys).to_csv(f"{tick}_buy_orders_{name}.csv",index=True)
+#pd.DataFrame(sells).to_csv(f"{tick}_sell_orders_{name}.csv",index=True)
 
 #Super trend formula.
 def tr(data):
@@ -128,11 +128,10 @@ def check_buy_sell_signals(df):
                           'Quantity':order['info']['executedQty'],
                           'Type':order['info']['side']})
             in_position = False
-            print('Sold at price greater than previous purchase price.')
+            print('Sold at price greater than either min_sell_price or previous purchase price.')
         else:
             print("Did not find opportunity to sell, no task.")
 
-#
 def run_bot():
     print(f"\nFetching new bars for {datetime.now(tzlocal()).isoformat()}")
     print("In position:", in_position,";\nTimeframe: ",timeframe)
