@@ -12,7 +12,7 @@ exchange = ccxt.binanceus({
 "apiKey": my_config.BINANCE_KEY,
 "secret": my_config.BINANCE_SECRET,
 'enableRateLimit': True})
-ccxt.binanceus({ 'options':{ 'adjustForTimeDifference':True}})
+ccxt.binanceus({ 'options':{'adjustForTimeDifference':True}})
 
 #Get user balance data
 bal = pd.DataFrame(exchange.fetch_balance()['info']['balances'])
