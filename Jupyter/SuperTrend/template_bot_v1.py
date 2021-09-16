@@ -84,9 +84,9 @@ def check_buy_sell_signals(df):
     
     last_row_index = len(df.index) - 1
     previous_row_index = last_row_index - 1
-    
+#Buy 
     if not df['in_uptrend'][previous_row_index] and df['in_uptrend'][last_row_index]:
-        print("Changed to uptrend - Buy")
+        #print("Changed to uptrend - Buy")
         if not in_position:
             order = exchange.create_market_buy_order(f'{ticker}',order_size)
             print('Status:'+order['info']['status'],
@@ -99,56 +99,71 @@ def check_buy_sell_signals(df):
                          'Price':order['trades'][0]['info']['price'],
                          'Quantity':order['info']['executedQty'],
                          'Type':order['info']['side']})
-            pd.DataFrame(buys).to_csv(f"{ticker}_buy_orders.csv",index=True)
+            pd.DataFrame(buys).to_csv(f"{ticker}_buy_orders_{name}.csv",index=True)
             in_position = True
         else:
-            print("Currently in position, no task.")
+            #print("Currently in position, no task.")
             try:
                 print("Previous purchase price:",buys[len(buys)-1]['Price'])
             except:
                 pass
-
+#Sell
     if df['in_uptrend'][previous_row_index] and not df['in_uptrend'][last_row_index]:
         bar = exchange.fetch_ohlcv(f'{ticker}', timeframe="5m", limit=5)
         price = bar[-1][1]
-        print("Changed to downtrend.")
-        try:
-            if in_position and price > buys[len(buys)-1]['Price']+buys[len(buys)-1]['Price']*0.011: #Ensures sell price is 101.1% avg.price
-                print("Purchase price < current_market_price - Sell.")
-                order = exchange.create_market_sell_order(f'{ticker}',order_size)
-                print('Status:'+order['info']['status'],
-                      'Price:'+order['trades'][0]['info']['price'],
-                      'Quantity:'+order['info']['executedQty'],
-                      'Type:'+order['info']['side'])
-                sells.append({'Date':datetime.now().isoformat(),
-                              'Ticker':ticker,
-                              'Status':order['info']['status'],
-                              'Price':order['trades'][0]['info']['price'],
-                              'Quantity':order['info']['executedQty'],
-                              'Type':order['info']['side']})
-                pd.DataFrame(sells).to_csv(f"{ticker}_sell_orders.csv",index=True)
-                in_position = False
-            else:
-                print("Previous purchase price < current price, no task.")
-        except:
-            if in_position and price > bar[0][3]: #Ensures sell price > low price in t-25mins
-                
-                print("No purchase price data. - Sell.")
-                order = exchange.create_market_sell_order(f'{ticker}',order_size)
-                print('Status:'+order['info']['status'],
-                      'Price:'+order['trades'][0]['info']['price'],
-                      'Quantity:'+order['info']['executedQty'],
-                      'Type:'+order['info']['side'])
-                sells.append({'Date':datetime.now().isoformat(),
-                              'Ticker':ticker,
-                              'Status':order['info']['status'],
-                              'Price':order['trades'][0]['info']['price'],
-                              'Quantity':order['info']['executedQty'],
-                              'Type':order['info']['side']})
-                pd.DataFrame(sells).to_csv(f"{ticker}_sell_orders.csv",index=True)
-                in_position = False
-            else:
-                print("No previous purchase price & current price > recent past prices, no task.")
+        
+        #print("Changed to downtrend.")
+        if in_position and price > buys[len(buys)-1]['Price']+buys[len(buys)-1]['Price']*0.011: #Ensures sell price is 101.1% avg.price
+            print("Purchase price < current_market_price - Sell.")
+            order = exchange.create_market_sell_order(f'{ticker}',order_size)
+            print('Status:'+order['info']['status'],
+                  'Price:'+order['trades'][0]['info']['price'],
+                  'Quantity:'+order['info']['executedQty'],
+                  'Type:'+order['info']['side'])
+            sells.append({'Date':datetime.now().isoformat(),
+                          'Ticker':ticker,
+                          'Status':order['info']['status'],
+                          'Price':order['trades'][0]['info']['price'],
+                          'Quantity':order['info']['executedQty'],
+                          'Type':order['info']['side']})
+            pd.DataFrame(sells).to_csv(f"{ticker}_sell_orders_{name}.csv",index=True)
+            in_position = False
+
+        elif in_position and price > bar[0][3]:#Ensures sell price > low price in t-25mins
+            print("No purchase price data. - Sell.")
+            order = exchange.create_market_sell_order(f'{ticker}',order_size)
+            print('Status:'+order['info']['status'],
+                  'Price:'+order['trades'][0]['info']['price'],
+                  'Quantity:'+order['info']['executedQty'],
+                  'Type:'+order['info']['side'])
+            sells.append({'Date':datetime.now().isoformat(),
+                          'Ticker':ticker,
+                          'Status':order['info']['status'],
+                          'Price':order['trades'][0]['info']['price'],
+                          'Quantity':order['info']['executedQty'],
+                          'Type':order['info']['side']})
+            pd.DataFrame(sells).to_csv(f"{ticker}_sell_orders_{name}.csv",index=True)
+            in_position = False
+            print('Sold at price greater than what the price was 25mins ago.')
+
+        elif in_position:
+            print("No purchase price data. - Sell.")
+            order = exchange.create_market_sell_order(f'{ticker}',order_size)
+            print('Status:'+order['info']['status'],
+                  'Price:'+order['trades'][0]['info']['price'],
+                  'Quantity:'+order['info']['executedQty'],
+                  'Type:'+order['info']['side'])
+            sells.append({'Date':datetime.now().isoformat(),
+                          'Ticker':ticker,
+                          'Status':order['info']['status'],
+                          'Price':order['trades'][0]['info']['price'],
+                          'Quantity':order['info']['executedQty'],
+                          'Type':order['info']['side']})
+            pd.DataFrame(sells).to_csv(f"{ticker}_sell_orders_{name}.csv",index=True)
+            in_position = False
+            print('Sold for an L.')
+        else:
+            print("Not in position, no task.")
 
 #Run le bot.
 def run_bot():
@@ -156,7 +171,7 @@ def run_bot():
     print("In position:", in_position,";\nTimeframe: ",timeframe,"; Trade amount: $",trade_amount)
     bars = exchange.fetch_ohlcv(f'{ticker}', timeframe=timeframe, limit=100)
     df = pd.DataFrame(bars[:-1], columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
-    df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
+    df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms').dt.tz_localize(None)
     supertrend_data = supertrend(df)
     check_buy_sell_signals(supertrend_data)
     
