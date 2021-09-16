@@ -59,6 +59,7 @@ def supertrend(df, period=7, atr_multiplier=3):
     return df
 
 ####Parameters for INDEPENDENT HARD-VALUE TRADE AMOUNT####
+name='blank'
 ticker = str(input("Insert ticker: XXXX ")+'/USD')
 trade_amount = int(input("Trade amount: $"))
 timeframe = "5m" #str(input("Candlestick timeframe: (1m,3m,5m,15m,30m,1h,1d) "))
@@ -66,13 +67,13 @@ timeframe = "5m" #str(input("Candlestick timeframe: (1m,3m,5m,15m,30m,1h,1d) "))
 bal = pd.DataFrame(exchange.fetch_balance()['info']['balances'])
 bal['free'] = pd.to_numeric(bal['free'])
 bal = bal[bal.free!=0].drop(columns='locked').reset_index(drop=True)
-bal = bal[bal['asset']==ticker[:4].replace('/','')].reset_index(drop=True).free[0]
-
+try:
+    bal = bal[bal['asset']==ticker[:4].replace('/','')].reset_index(drop=True).free[0]
+except:
+    bal = bal[bal['asset']==ticker[:5].replace('/','').replace(' ','')].reset_index(drop=True).free[0]
 bar = exchange.fetch_ohlcv(f'{ticker}', timeframe=timeframe, limit=5)
 order_size = int(trade_amount/bar[4][1]-(.05*(trade_amount/bar[4][1])))
 in_position = int(bal*bar[-1][1])>trade_amount
-
-#Collects previous orders.
 buys,sells = [],[]
 
 #Decision maker.
