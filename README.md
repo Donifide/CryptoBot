@@ -34,4 +34,4 @@ That is, it is to be developed with "plug-and-play" design in order to develop d
 
 Once the trade signal is sent, the execution class with send the order to Binance.US via ccxt.exchange. For this execution to work, the user will need to verify their identity at CryBot startup.
 
-Once properly authenticated, and trading strategy chosen, let the gains begin! :tada::rocket::full_moon:
+Relax, have fun, and don't forget to drink plenty of water! :tada::rocket::full_moon:
