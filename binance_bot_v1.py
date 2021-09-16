@@ -84,6 +84,7 @@ def check_buy_sell_signals(df):
                          'Type':order['info']['side']})
             previous_price=order['trades'][0]['info']['price']
             in_position = True
+            min_sell_price = order['info']['status']
             print("Bought.")
         else:
             print("Already in traded position, no task.")
@@ -127,7 +128,7 @@ def check_buy_sell_signals(df):
                           'Quantity':order['info']['executedQty'],
                           'Type':order['info']['side']})
             in_position = False
-            print('Sold at price greater than what the price was 25mins ago.')
+            print('Sold at price greater than previous purchase price.')
         else:
             print("Did not find opportunity to sell, no task.")
 
