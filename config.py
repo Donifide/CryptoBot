@@ -2,6 +2,8 @@
 Config for various platform logins
 """
 import os
+BINANCE_KEY = ""
+BINANCE_SECRET = ""
 
 #Keep these values safe.
 BINANCE_KEY = ""
