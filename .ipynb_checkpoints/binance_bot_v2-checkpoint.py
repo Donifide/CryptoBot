@@ -18,7 +18,7 @@ tick=input("Insert ticker: ")
 ticker=tick+"/"+input("USD or USDT?")
 timeframe="5m"#1m,5m,15m,30m,1h,2h,6h,1d
 order_size=input("Order size in "+tick+": ")
-in_position=input("Do not accumulate until next buy signal? - True/False: ")
+in_position = ast.literal_eval(input("Do not accumulate until next buy signal? - True/False:").capitalize())
 min_sell_price=float(input("Minimum sell price: "))
 markup=1+float(input("Enter percentage of desired markup: "))/100
 
