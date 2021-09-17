@@ -69,16 +69,15 @@ def check_buy_sell_signals(df):
                   'Price:'+order['trades'][0]['info']['price'],
                   'Quantity:'+order['info']['executedQty'],
                   'Type:'+order['info']['side'])
-            min_sell_price = order['trades'][0]['info']['price']
+            min_sell_price = float(order['trades'][0]['info']['price'])
             in_position = True
             print("Bought.")
         else:
             print("Already in desired position, no task.")
-            print("Minimum sell price: ",min_sell_price)
 #Sell
     if df['in_uptrend'][previous_row_index] and not df['in_uptrend'][last_row_index]:
-        bar = exchange.fetch_ohlcv(f'{ticker}', timeframe="5m", limit=5)
-        price = bar[-1][1]
+        bar = exchange.fetch_ohlcv(f'{ticker}', timeframe="1m", limit=1)
+        price = float(bar[-1][3])#low price
         print("Changeed to downtrend.")
         if in_position and price > min_sell_price:
             order = exchange.create_market_sell_order(f'{ticker}',order_size)
@@ -90,10 +89,9 @@ def check_buy_sell_signals(df):
             print('Sold at price greater than min_sell_price or previous purchase price.')
         else:
             print("Did not find opportunity to sell, no task.")
-
 def run_bot():
     print(f"\nFetching new bars for {datetime.now(tzlocal()).isoformat()}")
-    print("In position:", in_position,";\nTimeframe: ",timeframe)
+    print("In position:", in_position,";\nTimeframe: ",timeframe,"\n")
     bars = exchange.fetch_ohlcv(f'{ticker}', timeframe=timeframe, limit=100)
     df = pd.DataFrame(bars[:-1], columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
     df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms').dt.tz_localize(None)
@@ -104,7 +102,8 @@ def run_bot():
     bal['free'] = pd.to_numeric(bal['free'])
     bal = bal[bal.free!=0].drop(columns='locked').reset_index(drop=True)
     bal = bal[bal['asset']==ticker[:4].replace('/','')].reset_index(drop=True).free[0]
-    print("Balance: $",bal*bars[-1][1],"Position: ",bal)
+    print("\nBalance: $",bal*bars[-1][1],"Position:",bal)
+    print("Minimum sell price: ",min_sell_price)
 schedule.every(299).seconds.do(run_bot)
 while True:
     schedule.run_pending()
