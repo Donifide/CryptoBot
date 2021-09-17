@@ -80,18 +80,6 @@ def check_buy_sell_signals(df):
         bar = exchange.fetch_ohlcv(f'{ticker}', timeframe="5m", limit=5)
         price = bar[-1][1]
         print("Changeed to downtrend.")
-        try:
-            if in_position and price > min_sell_price*1.011:
-                print("Purchase price < current_market_price - Sell.")
-                order = exchange.create_market_sell_order(f'{ticker}',order_size)
-                print('Status:'+order['info']['status'],
-                      'Price:'+order['trades'][0]['info']['price'],
-                      'Quantity:'+order['info']['executedQty'],
-                      'Type:'+order['info']['side'])
-                in_position = False
-                print("Sold at or above 1.1% profit.")
-        except:
-            pass
         if in_position and price > min_sell_price:
             order = exchange.create_market_sell_order(f'{ticker}',order_size)
             print('Status:'+order['info']['status'],
@@ -102,7 +90,7 @@ def check_buy_sell_signals(df):
             print('Sold at price greater than min_sell_price or previous purchase price.')
         else:
             print("Did not find opportunity to sell, no task.")
-#Set her free!
+
 def run_bot():
     print(f"\nFetching new bars for {datetime.now(tzlocal()).isoformat()}")
     print("In position:", in_position,";\nTimeframe: ",timeframe)
