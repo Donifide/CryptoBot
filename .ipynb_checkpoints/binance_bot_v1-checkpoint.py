@@ -1,5 +1,5 @@
 #Unpack necessities
-import my_config,schedule,time,csv,ccxt
+import my_config,schedule,time,csv,ccxt,ast
 from dateutil.tz import tzlocal
 from datetime import datetime
 import pandas as pd
@@ -19,14 +19,9 @@ name=input("Enter name: ")
 tick=input("Insert ticker: ")
 ticker=tick+"/"+input("USD or USDT?")
 timeframe="5m" #1m,5m,15m,30m,1h,2h,6h,1d
-order_size = input("Order size in "+tick+":")
+order_size = input("Order size in "+tick+": ")
 in_position = input("Do not accumulate until next buy signal? - True/False: ")
 min_sell_price=float(input("Minimum sell price: "))
-
-#Create data collection dataframes
-buys,sells = [],[]
-#pd.DataFrame(buys).to_csv(f"{tick}_buy_orders_{name}.csv",index=True)
-#pd.DataFrame(sells).to_csv(f"{tick}_sell_orders_{name}.csv",index=True)
 
 #Super trend formula.
 def tr(data):
@@ -62,7 +57,7 @@ def supertrend(df, period=7, atr_multiplier=3):
 
 #Analysis & decision making
 def check_buy_sell_signals(df):
-    global in_position,order_size,ticker,timeframe,trade_amount,previous_price
+    global in_position,order_size,ticker,timeframe,trade_amount,min_sell_price
     print("Analyzing",ticker,"data... ")
     print(df.tail(3)[['timestamp','open','in_uptrend']])
     last_row_index = len(df.index) - 1
@@ -72,22 +67,15 @@ def check_buy_sell_signals(df):
         print("Changed to uptrend. Attempting to buy.")
         if not in_position:
             order = exchange.create_market_buy_order(f'{ticker}',order_size)
-            print('Status:'+order['info']['status'],
+            print('\nStatus:'+order['info']['status'],
                   'Price:'+order['trades'][0]['info']['price'],
                   'Quantity:'+order['info']['executedQty'],
                   'Type:'+order['info']['side'])
-            buys.append({'Date':datetime.now().isoformat(),
-                         'Ticker':ticker,
-                         'Status':order['info']['status'],
-                         'Price':order['trades'][0]['info']['price'],
-                         'Quantity':order['info']['executedQty'],
-                         'Type':order['info']['side']})
-            previous_price=order['trades'][0]['info']['price']
+            min_sell_price = order['trades'][0]['info']['price']
             in_position = True
-            min_sell_price = order['info']['status']
             print("Bought.")
         else:
-            print("Already in traded position, no task.")
+            print("Already in desired position, no task.")
             try:
                 print("Previous purchase price:",buys[len(buys)-1]['Price'])
             except:
@@ -98,19 +86,13 @@ def check_buy_sell_signals(df):
         price = bar[-1][1]
         print("Changeed to downtrend.")
         try:
-            if in_position and price > buys[len(buys)-1]['Price']+buys[len(buys)-1]['Price']*0.011:
+            if in_position and price > min_sell_price*1.011:
                 print("Purchase price < current_market_price - Sell.")
                 order = exchange.create_market_sell_order(f'{ticker}',order_size)
                 print('Status:'+order['info']['status'],
                       'Price:'+order['trades'][0]['info']['price'],
                       'Quantity:'+order['info']['executedQty'],
                       'Type:'+order['info']['side'])
-                sells.append({'Date':datetime.now().isoformat(),
-                              'Ticker':ticker,
-                              'Status':order['info']['status'],
-                              'Price':order['trades'][0]['info']['price'],
-                              'Quantity':order['info']['executedQty'],
-                              'Type':order['info']['side']})
                 in_position = False
                 print("Sold at or above 1.1% profit.")
         except:
@@ -121,17 +103,11 @@ def check_buy_sell_signals(df):
                   'Price:'+order['trades'][0]['info']['price'],
                   'Quantity:'+order['info']['executedQty'],
                   'Type:'+order['info']['side'])
-            sells.append({'Date':datetime.now().isoformat(),
-                          'Ticker':ticker,
-                          'Status':order['info']['status'],
-                          'Price':order['trades'][0]['info']['price'],
-                          'Quantity':order['info']['executedQty'],
-                          'Type':order['info']['side']})
             in_position = False
-            print('Sold at price greater than either min_sell_price or previous purchase price.')
+            print('Sold at price greater than min_sell_price or previous purchase price.')
         else:
             print("Did not find opportunity to sell, no task.")
-
+#Set her free!
 def run_bot():
     print(f"\nFetching new bars for {datetime.now(tzlocal()).isoformat()}")
     print("In position:", in_position,";\nTimeframe: ",timeframe)
@@ -140,11 +116,7 @@ def run_bot():
     df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms').dt.tz_localize(None)
     supertrend_data = supertrend(df)
     check_buy_sell_signals(supertrend_data)
-    try:
-        pd.DataFrame(buys).to_csv(f"{ticker}_buy_orders_{name}.csv",index=True)
-        pd.DataFrame(sells).to_csv(f"{ticker}_sell_orders_{name}.csv",index=True)
-    except:
-        pass
+
     bal = pd.DataFrame(exchange.fetch_balance()['info']['balances'])
     bal['free'] = pd.to_numeric(bal['free'])
     bal = bal[bal.free!=0].drop(columns='locked').reset_index(drop=True)
