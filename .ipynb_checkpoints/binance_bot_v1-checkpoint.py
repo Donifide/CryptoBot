@@ -1,18 +1,16 @@
-#Unpack necessities
-import my_config,schedule,time,csv,ccxt,ast
+import ccxt,schedule,warnings,time,ast
+warnings.filterwarnings('ignore')
 from dateutil.tz import tzlocal
 from datetime import datetime
 import pandas as pd
 import numpy as np
-import warnings
-warnings.filterwarnings('ignore')
+ccxt.binanceus({ 'options':{ 'adjustForTimeDifference':True}})
 
 #Connect to exchange.
 exchange = ccxt.binanceus({
 "apiKey": my_config.BINANCE_KEY,
 "secret": my_config.BINANCE_SECRET,
 'enableRateLimit': True})
-ccxt.binanceus({ 'options':{ 'adjustForTimeDifference':True}})
 
 #Parameters
 name=input("Enter name: ")
@@ -76,10 +74,7 @@ def check_buy_sell_signals(df):
             print("Bought.")
         else:
             print("Already in desired position, no task.")
-            try:
-                print("Previous purchase price:",buys[len(buys)-1]['Price'])
-            except:
-                pass
+            print("Minimum sell price: ",min_sell_price)
 #Sell
     if df['in_uptrend'][previous_row_index] and not df['in_uptrend'][last_row_index]:
         bar = exchange.fetch_ohlcv(f'{ticker}', timeframe="5m", limit=5)
