@@ -20,6 +20,7 @@ timeframe="5m" #1m,5m,15m,30m,1h,2h,6h,1d
 order_size = input("Order size in "+tick+": ")
 in_position = input("Do not accumulate until next buy signal? - True/False: ")
 min_sell_price=float(input("Minimum sell price: "))
+markup=1+float(input("Enter percentage of desired markup: "))/100
 
 #Super trend formula.
 def tr(data):
@@ -69,7 +70,7 @@ def check_buy_sell_signals(df):
                   'Price:'+order['trades'][0]['info']['price'],
                   'Quantity:'+order['info']['executedQty'],
                   'Type:'+order['info']['side'])
-            min_sell_price = float(order['trades'][0]['info']['price'])
+            min_sell_price = float(order['trades'][0]['info']['price'])*markup
             in_position = True
             print("Bought.")
         else:
