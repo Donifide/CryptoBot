@@ -16,9 +16,9 @@ exchange = ccxt.binanceus({
 name=input("Enter name: ")
 tick=input("Insert ticker: ")
 ticker=tick+"/"+input("USD or USDT?")
-timeframe="5m" #1m,5m,15m,30m,1h,2h,6h,1d
-order_size = input("Order size in "+tick+": ")
-in_position = input("Do not accumulate until next buy signal? - True/False: ")
+timeframe="5m"#1m,5m,15m,30m,1h,2h,6h,1d
+order_size=input("Order size in "+tick+": ")
+in_position=input("Do not accumulate until next buy signal? - True/False: ")
 min_sell_price=float(input("Minimum sell price: "))
 markup=1+float(input("Enter percentage of desired markup: "))/100
 
@@ -57,10 +57,10 @@ def supertrend(df, period=7, atr_multiplier=3):
 #Analysis & decision making
 def check_buy_sell_signals(df):
     global in_position,order_size,ticker,timeframe,trade_amount,min_sell_price
-    print("Analyzing",ticker,"data... ")
+    print("Analyzing",ticker,"data...")
     print(df.tail(3)[['timestamp','open','in_uptrend']])
-    last_row_index = len(df.index) - 1
-    previous_row_index = last_row_index - 1
+    last_row_index=len(df.index)-1
+    previous_row_index=last_row_index-1
 #Buy 
     if not df['in_uptrend'][previous_row_index] and df['in_uptrend'][last_row_index]:
         print("Changed to uptrend. Attempting to buy.")
@@ -104,7 +104,7 @@ def run_bot():
     bal = bal[bal.free!=0].drop(columns='locked').reset_index(drop=True)
     bal = bal[bal['asset']==ticker[:4].replace('/','')].reset_index(drop=True).free[0]
     print("\nBalance: $",bal*bars[-1][1],"Position:",bal)
-    print("Minimum sell price: ",min_sell_price)
+    print("Minimum sell price:",min_sell_price,"Order size:",order_size)
 schedule.every(299).seconds.do(run_bot)
 while True:
     schedule.run_pending()
