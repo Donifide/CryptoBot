@@ -121,7 +121,7 @@ def run_bot():
     print("\nBalance: $",bal*bars[-1][1],", Position:",bal)
     print("Minimum sell price:",min_sell_price,", Order size:",order_size)
     print("Markup set to:",markup,"%")
-schedule.every(randint(42,299)).minutes.do(run_bot)
+schedule.every(randint(10,15)).minutes.do(run_bot)
 while True:
     schedule.run_pending()
     time.sleep(1)
