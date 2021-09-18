@@ -44,7 +44,7 @@ def supertrend(df, period=7, atr_multiplier=3):
     return df
 
 #Set user variables
-ticker=input("Insert the prefix of your ticker of choice: (example: ) ")
+ticker=input("Insert the prefix of your ticker of choice: (example: LTC-USDT) ")
 
 #Read in historical data.
 df  = pq.read_table(f'{ticker}.parquet').to_pandas().reset_index(drop=False)
