@@ -1,9 +1,11 @@
 import ccxt,schedule,warnings,time,ast
 warnings.filterwarnings('ignore')
+import matplotlib.pyplot as plt
 from dateutil.tz import tzlocal
 from datetime import datetime
 import pandas as pd
 import numpy as np
+
 ccxt.binanceus({ 'options':{ 'adjustForTimeDifference':True}})
 
 #Connect to exchange.
