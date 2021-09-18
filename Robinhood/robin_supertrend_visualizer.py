@@ -1,4 +1,3 @@
-#!pip install -r requirements.txt
 import schedule,warnings,time,ast,config
 warnings.filterwarnings('ignore')
 import matplotlib.pyplot as plt

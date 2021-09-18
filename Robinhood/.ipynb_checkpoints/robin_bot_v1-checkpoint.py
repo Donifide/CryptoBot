@@ -1,4 +1,4 @@
-import ccxt,schedule,warnings,time,ast,config
+import schedule,warnings,time,ast,config
 warnings.filterwarnings('ignore')
 from dateutil.tz import tzlocal
 from datetime import datetime
