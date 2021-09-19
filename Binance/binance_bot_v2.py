@@ -1,30 +1,16 @@
-import ccxt,schedule,warnings,time,ast
+import ccxt,schedule,warnings,time,ast,config
 warnings.filterwarnings('ignore')
-import matplotlib.pyplot as plt
 from dateutil.tz import tzlocal
 from datetime import datetime
+from random import randint
+from random import seed
 import pandas as pd
 import numpy as np
-
 ccxt.binanceus({ 'options':{ 'adjustForTimeDifference':True}})
-
-#Connect to exchange.
-exchange = ccxt.binanceus({
-"apiKey": my_config.BINANCE_KEY,
-"secret": my_config.BINANCE_SECRET,
+exchange = ccxt.binanceus({#don
+"apiKey": config.BINANCE_KEY_vx,
+"secret": config.BINANCE_SECRET_vx,
 'enableRateLimit': True})
-
-#Parameters
-name=input("Enter name: ")
-tick=input("Insert ticker: ")
-ticker=tick+"/"+input("USD or USDT?")
-timeframe="5m"#1m,5m,15m,30m,1h,2h,6h,1d
-order_size=input("Order size in "+tick+": ")
-in_position = ast.literal_eval(input("Do not accumulate until next buy signal? - True/False:").capitalize())
-min_sell_price=float(input("Minimum sell price: "))
-markup=1+float(input("Enter percentage of desired markup: "))/100
-
-#Super trend formula.
 def tr(data):
     data['previous_close'] = data['close'].shift(1)
     data['high-low'] = abs(data['high'] - data['low'])
@@ -56,16 +42,25 @@ def supertrend(df, period=7, atr_multiplier=3):
                 df['upperband'][current] = df['upperband'][previous]
     return df
 
-#Analysis & decision making
+#Parameters
+name=input("Enter name: ")
+tick=input("Insert ticker: ")
+ticker=tick+"/"+input("USD or USDT?")
+timeframe="5m" #1m,5m,15m,30m,1h,2h,6h,1d
+order_size = float(input("Order size in "+tick+": "))
+in_position = ast.literal_eval(input("Do not accumulate until next buy signal? - True/False: ").capitalize())
+min_sell_price=float(input("Minimum sell price: "))
+markup=1+float(input("Enter percentage of desired markup: %"))/100
+
+#Signal
 def check_buy_sell_signals(df):
-    global in_position,order_size,ticker,timeframe,trade_amount,min_sell_price
-    print("Analyzing",ticker,"data...")
-    print(df.tail(3)[['timestamp','open','in_uptrend']])
-    last_row_index=len(df.index)-1
-    previous_row_index=last_row_index-1
-#Buy 
+    global in_position,order_size,ticker,timeframe,trade_amount,min_sell_price,markup
+    print("Analyzing",ticker,"data... ")
+    print(df.tail(3)[['timestamp','close','volume','in_uptrend']])
+    last_row_index = len(df.index) - 1
+    previous_row_index = last_row_index - 1 
     if not df['in_uptrend'][previous_row_index] and df['in_uptrend'][last_row_index]:
-        print("Changed to uptrend. Attempting to buy.")
+        print("Changed to uptrend. Attempting purchase.")
         if not in_position:
             order = exchange.create_market_buy_order(f'{ticker}',order_size)
             print('\nStatus:'+order['info']['status'],
@@ -74,14 +69,13 @@ def check_buy_sell_signals(df):
                   'Type:'+order['info']['side'])
             min_sell_price = float(order['trades'][0]['info']['price'])*markup
             in_position = True
-            print("Bought.")
+            print("Purchased.")
         else:
-            print("Already in desired position, no task.")
-#Sell
+            print("Already in desired trading position, no task.")
     if df['in_uptrend'][previous_row_index] and not df['in_uptrend'][last_row_index]:
         bar = exchange.fetch_ohlcv(f'{ticker}', timeframe="1m", limit=1)
-        price = float(bar[-1][3])#most recent low price
-        print("Changeed to downtrend.")
+        price = float(bar[-1][3])#low price
+        print("Changed to downtrend. Attempting sale.")
         if in_position and price > min_sell_price:
             order = exchange.create_market_sell_order(f'{ticker}',order_size)
             print('Status:'+order['info']['status'],
@@ -92,6 +86,8 @@ def check_buy_sell_signals(df):
             print('Sold at price greater than min_sell_price or previous purchase price.')
         else:
             print("Did not find opportunity to sell, no task.")
+
+#Execution            
 def run_bot():
     print(f"\nFetching new bars for {datetime.now(tzlocal()).isoformat()}")
     print("In position:", in_position,";\nTimeframe: ",timeframe,"\n")
@@ -100,14 +96,14 @@ def run_bot():
     df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms').dt.tz_localize(None)
     supertrend_data = supertrend(df)
     check_buy_sell_signals(supertrend_data)
-
     bal = pd.DataFrame(exchange.fetch_balance()['info']['balances'])
     bal['free'] = pd.to_numeric(bal['free'])
     bal = bal[bal.free!=0].drop(columns='locked').reset_index(drop=True)
     bal = bal[bal['asset']==ticker[:4].replace('/','')].reset_index(drop=True).free[0]
-    print("\nBalance: $",bal*bars[-1][1],"Position:",bal)
-    print("Minimum sell price:",min_sell_price,"Order size:",order_size)
-schedule.every(299).seconds.do(run_bot)
+    print("\nBalance: $",bal*bars[-1][1],", Position:",bal)
+    print("Minimum sell price:",min_sell_price,", Order size:",order_size)
+    print("Markup set to:",markup,"%")
+schedule.every(randint(42,299)).seconds.do(run_bot)
 while True:
     schedule.run_pending()
     time.sleep(1)

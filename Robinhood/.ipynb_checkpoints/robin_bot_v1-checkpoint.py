@@ -45,14 +45,14 @@ def supertrend(df, period=7, atr_multiplier=3):
                 df['upperband'][current] = df['upperband'][previous]
     return df
 #Parameters
-name=input("Enter name: ")
-ticker=input("Insert ticker: ").upper()
-timeframe=input('Interval must be "15second","5minute","10minute","hour","day",or "week": ')
-span=input('Span must be "hour","day","week","month","3month","year",or "5year": ')
-order_size = float(input("Order size in "+tick+": "))
-in_position = ast.literal_eval(input("Do not accumulate until next buy signal? - True/False: ").capitalize())
-min_sell_price=float(input("Minimum sell price: "))
-markup=1+float(input("Enter percentage of desired markup: %"))/100
+name="Don"#input("Enter name: ")
+ticker="DOGE"#input("Insert ticker: ").upper()
+timeframe="5minute"#input('Interval must be "15second","5minute","10minute","hour","day",or "week": ')
+span="day"#input('Span must be "hour","day","week","month","3month","year",or "5year": ')
+order_size = 200#float(input("Order size in "+tick+": "))
+in_position = False#ast.literal_eval(input("Do not accumulate until next buy signal? - True/False: ").capitalize())
+min_sell_price=0.24#float(input("Minimum sell price: "))
+markup=1+float(0.03)#float(input("Enter percentage of desired markup: %"))/100
 
 #Signal
 def check_buy_sell_signals(df):
@@ -66,8 +66,8 @@ def check_buy_sell_signals(df):
         if not in_position:
             order = r.order_buy_crypto_limit(ticker,order_size,r.get_crypto_quote(ticker, info=None)["mark_price"], timeInForce='gtc')
             print('Status:'+order['state'],
-                  'Price:'+order['price'],
-                  'Quantity:'+order['quantity'],
+                  'Price:'+float(order['price']),
+                  'Quantity:'+float(order['quantity']),
                   'Type:'+order['side'])
             order_id = order["id"]
             print("Order state:",r.get_crypto_order_info(order_id)['state'])
@@ -80,22 +80,13 @@ def check_buy_sell_signals(df):
         else:
             print("Already in desired trading position, no task.")
     if df['in_uptrend'][previous_row_index] and not df['in_uptrend'][last_row_index]:
-        df=pd.DataFrame.from_dict(r.crypto.get_crypto_historicals(ticker, interval=timeframe, span=span, bounds='24_7', info=None))
-        df['timestamp']=pd.to_datetime(df['begins_at'], format='%Y-%m-%d').dt.tz_localize(None)
-        df['open'] = df.apply(lambda x : float(x['open_price']),axis=1)
-        df['high'] = df.apply(lambda x : float(x['high_price']),axis=1)
-        df['low'] = df.apply(lambda x : float(x['low_price']),axis=1)
-        df['close'] = df.apply(lambda x : float(x['close_price']),axis=1)
-        df=df.drop(columns=['open_price','close_price','high_price','low_price'])
-        df=df[['timestamp','open','high','low','close','volume']]
-        df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms').dt.tz_localize(None)
-        price = df.low[len(df)-1]#curent low price
+        price = float(r.get_crypto_quote("DOGE", info=None)['low_price'])#curent low price
         print("Changed to downtrend. Attempting sale.")
         if in_position and price > min_sell_price:
             order_sell = r.order_sell_crypto_limit(ticker, order_size,min_sell_price*markup, timeInForce='gtc')
             print('Status:'+order_sell['state'],
-                  'Price:'+order_sell['price'],
-                  'Quantity:'+order_sell['quantity'],
+                  'Price:'+float(order_sell['price']),
+                  'Quantity:'+float(order_sell['quantity']),
                   'Type:'+order_sell['side'])
             order_id_sell = order_sell["id"]
             print("Order state:",r.get_crypto_order_info(order_id_sell)['state'])
@@ -122,14 +113,9 @@ def run_bot():
     supertrend_data = supertrend(df)
     check_buy_sell_signals(supertrend_data)
     
-    #my_crypto_data = r.crypto.get_crypto_positions(info=None)
-    #my_crypto = pd.json_normalize(my_crypto_data, max_level=2)
-    #my_crypto = my_crypto.sort_values('quantity',ascending=False)[['currency.code','quantity','id']].reset_index(drop=True)
-    #my_crypto = my_crypto.head(8)
-    #print(my_crypto)
     print("Minimum sell price:",min_sell_price,", Order size:",order_size)
     print(name,"'s profit margin set to:",markup,"%")
-schedule.every(4).minutes.do(run_bot)
+schedule.every(randint(42,299)).seconds.do(run_bot)
 while True:
     schedule.run_pending()
     time.sleep(1)
