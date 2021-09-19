@@ -1,5 +1,5 @@
 import ccxt,schedule,warnings,time,ast,config
-from supertrend import supertrend as st
+import supertrend as st
 import check_buy_sell_signals as cbss
 warnings.filterwarnings('ignore')
 from dateutil.tz import tzlocal
