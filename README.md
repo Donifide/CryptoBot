@@ -20,6 +20,12 @@ Although our team is working very hard to get the fully user-friendly app deploy
 3. Binance.US crypto brokerage account. (API_KEY, API_SECRET) 
 4. Lastly, you'll need this repository. 
 
+Don't have Binance.US? [Sign up here!](https://accounts.binance.us/en/register?ref=52441695)
+1. After login, go to the menu settings and find API MANAGEMENT.
+2. Create API.
+3. Save and KEEP ULTRA SAFE your api.key & api.secret (in a config.py, follow format.)
+4. Then go into your terminal > find where the binance_bot_vX.py is located > run >>python binance_bot_vX.py)
+
 ### SuperTrend - Data :computer:
 
 This class will consist of a CCXT connection into Binance.US WebSocket interface that will feed live cryptocurrency data in the form of candle sticks; Open, High, Low, Close (OHLC).
