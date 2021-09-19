@@ -8,7 +8,7 @@ from random import seed
 import pandas as pd
 import numpy as np
 
-#Robinhood login
+#Robinhood login (ONLY NEED TO RUN THIS PART ONCE)
 login = r.authentication.login(username=config.rh_username,password=config.rh_password,store_session=True)
 access_token=login['access_token']
 token_type=login['token_type']
@@ -48,7 +48,7 @@ def supertrend(df, period=7, atr_multiplier=3):
 name=input("Enter name: ")
 ticker=input("Insert ticker: ").upper()
 timeframe=input('Interval must be "15second","5minute","10minute","hour","day",or "week": ')
-span = input('Span must be "hour","day","week","month","3month","year",or "5year": ')
+span=input('Span must be "hour","day","week","month","3month","year",or "5year": ')
 order_size = float(input("Order size in "+tick+": "))
 in_position = ast.literal_eval(input("Do not accumulate until next buy signal? - True/False: ").capitalize())
 min_sell_price=float(input("Minimum sell price: "))
@@ -64,12 +64,13 @@ def check_buy_sell_signals(df):
     if not df['in_uptrend'][previous_row_index] and df['in_uptrend'][last_row_index]:
         print("Changed to uptrend. Attempting purchase.")
         if not in_position:
-            order = r.order_buy_crypto_limit(ticker, order_size,r.get_crypto_quote(ticker, info=None)["mark_price"], timeInForce='gtc')
+            order = r.order_buy_crypto_limit(ticker,order_size,r.get_crypto_quote(ticker, info=None)["mark_price"], timeInForce='gtc')
             print('Status:'+order['state'],
                   'Price:'+order['price'],
                   'Quantity:'+order['quantity'],
                   'Type:'+order['side'])
             order_id = order["id"]
+            print("Order state:",r.get_crypto_order_info(order_id)['state'])
             if r.get_crypto_order_info(order_id)['state']=='filled':
                 min_sell_price = float(order['price'])
                 in_position = True
@@ -79,8 +80,16 @@ def check_buy_sell_signals(df):
         else:
             print("Already in desired trading position, no task.")
     if df['in_uptrend'][previous_row_index] and not df['in_uptrend'][last_row_index]:
-        bar = exchange.fetch_ohlcv(f'{ticker}', timeframe="1m", limit=1)
-        price = float(bar[-1][3])#low price
+        df=pd.DataFrame.from_dict(r.crypto.get_crypto_historicals(ticker, interval=timeframe, span=span, bounds='24_7', info=None))
+        df['timestamp']=pd.to_datetime(df['begins_at'], format='%Y-%m-%d').dt.tz_localize(None)
+        df['open'] = df.apply(lambda x : float(x['open_price']),axis=1)
+        df['high'] = df.apply(lambda x : float(x['high_price']),axis=1)
+        df['low'] = df.apply(lambda x : float(x['low_price']),axis=1)
+        df['close'] = df.apply(lambda x : float(x['close_price']),axis=1)
+        df=df.drop(columns=['open_price','close_price','high_price','low_price'])
+        df=df[['timestamp','open','high','low','close','volume']]
+        df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms').dt.tz_localize(None)
+        price = df.low[len(df)-1]#curent low price
         print("Changed to downtrend. Attempting sale.")
         if in_position and price > min_sell_price:
             order_sell = r.order_sell_crypto_limit(ticker, order_size,min_sell_price*markup, timeInForce='gtc')
@@ -89,19 +98,19 @@ def check_buy_sell_signals(df):
                   'Quantity:'+order_sell['quantity'],
                   'Type:'+order_sell['side'])
             order_id_sell = order_sell["id"]
+            print("Order state:",r.get_crypto_order_info(order_id_sell)['state'])
             if r.get_crypto_order_info(order_id_sell)['state']=='filled':
                 in_position = False
                 print("Order ID:",order_id_sell,"sold.")
             else:
                 print("Previous order: ",order_id_sell,"still not filled.")
-            print('Sold at price greater than min_sell_price or previous purchase price.')
         else:
             print("Did not find opportunity to sell, no task.")
 #Execution            
 def run_bot():
     print(f"\nFetching new bars for {datetime.now(tzlocal()).isoformat()}")
     print("In position:", in_position,";\nTimeframe: ",timeframe,"\n")
-    df=pd.DataFrame.from_dict(r.crypto.get_crypto_historicals(symbol, interval='3m', span='month', bounds='24_7', info=None))
+    df=pd.DataFrame.from_dict(r.crypto.get_crypto_historicals("DOGE", interval='5minute', span='day', bounds='24_7', info=None))
     df['timestamp']=pd.to_datetime(df['begins_at'], format='%Y-%m-%d').dt.tz_localize(None)
     df['open'] = df.apply(lambda x : float(x['open_price']),axis=1)
     df['high'] = df.apply(lambda x : float(x['high_price']),axis=1)
@@ -109,19 +118,18 @@ def run_bot():
     df['close'] = df.apply(lambda x : float(x['close_price']),axis=1)
     df=df.drop(columns=['open_price','close_price','high_price','low_price'])
     df=df[:-1][['timestamp','open','high','low','close','volume']]
-    df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms').dt.tz_localize(None)
     
     supertrend_data = supertrend(df)
     check_buy_sell_signals(supertrend_data)
     
-    bal = pd.DataFrame(exchange.fetch_balance()['info']['balances'])
-    bal['free'] = pd.to_numeric(bal['free'])
-    bal = bal[bal.free!=0].drop(columns='locked').reset_index(drop=True)
-    bal = bal[bal['asset']==ticker[:4].replace('/','')].reset_index(drop=True).free[0]
-    print("\nBalance: $",bal*bars[-1][1],", Position:",bal)
+    #my_crypto_data = r.crypto.get_crypto_positions(info=None)
+    #my_crypto = pd.json_normalize(my_crypto_data, max_level=2)
+    #my_crypto = my_crypto.sort_values('quantity',ascending=False)[['currency.code','quantity','id']].reset_index(drop=True)
+    #my_crypto = my_crypto.head(8)
+    #print(my_crypto)
     print("Minimum sell price:",min_sell_price,", Order size:",order_size)
-    print("Markup set to:",markup,"%")
-schedule.every(randint(10,15)).minutes.do(run_bot)
+    print(name,"'s profit margin set to:",markup,"%")
+schedule.every(4).minutes.do(run_bot)
 while True:
     schedule.run_pending()
     time.sleep(1)

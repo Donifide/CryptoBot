@@ -80,7 +80,7 @@ def check_buy_sell_signals(df):
 #Sell
     if df['in_uptrend'][previous_row_index] and not df['in_uptrend'][last_row_index]:
         bar = exchange.fetch_ohlcv(f'{ticker}', timeframe="1m", limit=1)
-        price = float(bar[-1][3])#low price
+        price = float(bar[-1][3])#most recent low price
         print("Changeed to downtrend.")
         if in_position and price > min_sell_price:
             order = exchange.create_market_sell_order(f'{ticker}',order_size)
