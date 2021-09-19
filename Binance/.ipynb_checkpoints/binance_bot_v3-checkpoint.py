@@ -1,6 +1,4 @@
-import ccxt,schedule,warnings,time,ast,config,csv
-import supertrend as st
-import check_buy_sell_signals as cbss
+import ccxt,schedule,warnings,time,ast,config
 warnings.filterwarnings('ignore')
 from dateutil.tz import tzlocal
 from datetime import datetime
@@ -13,45 +11,50 @@ exchange = ccxt.binanceus({
 "apiKey": config.BINANCE_KEY,
 "secret": config.BINANCE_SECRET,
 'enableRateLimit': True})
+
+#Supertrend formula
+def tr(data):
+    data['previous_close'] = data['close'].shift(1)
+    data['high-low'] = abs(data['high'] - data['low'])
+    data['high-pc'] = abs(data['high'] - data['previous_close'])
+    data['low-pc'] = abs(data['low'] - data['previous_close'])
+    tr = data[['high-low', 'high-pc', 'low-pc']].max(axis=1)
+    return tr
+def atr(data, period):
+    data['tr'] = tr(data)
+    atr = data['tr'].rolling(period).mean()
+    return atr
+def supertrend(df, period=7, atr_multiplier=3):
+    hl2 = (df['high'] + df['low']) / 2
+    df['atr'] = atr(df, period)
+    df['upperband'] = hl2 + (atr_multiplier * df['atr'])
+    df['lowerband'] = hl2 - (atr_multiplier * df['atr'])
+    df['in_uptrend'] = True
+    for current in range(1, len(df.index)):
+        previous = current - 1
+        if df['close'][current] > df['upperband'][previous]:
+            df['in_uptrend'][current] = True
+        elif df['close'][current] < df['lowerband'][previous]:
+            df['in_uptrend'][current] = False
+        else:
+            df['in_uptrend'][current] = df['in_uptrend'][previous]
+            if df['in_uptrend'][current] and df['lowerband'][current] < df['lowerband'][previous]:
+                df['lowerband'][current] = df['lowerband'][previous]
+            if not df['in_uptrend'][current] and df['upperband'][current] > df['upperband'][previous]:
+                df['upperband'][current] = df['upperband'][previous]
+    return df
+
+#Instance parameters
 name=input("Enter name: ")
-tick=input("Insert ticker: (example: ADA)")
+tick=input("Insert ticker: ")
 ticker=tick+"/"+input("USD or USDT?")
-timeframe=input("Timeframe (examples: 1m,5m,15m,30m,1h,2h,6h,1d): ")
+timeframe="5m" #1m,5m,15m,30m,1h,2h,6h,1d
 order_size = float(input("Order size in "+tick+": "))
 in_position = ast.literal_eval(input("Do not accumulate until next buy signal? - True/False: ").capitalize())
 min_sell_price=float(input("Minimum sell price: "))
-markup=1+float(input("Enter percentage of desired markup: %"))/100
-#Supertrend
-def tr(data):
-    data['previous_close']=data['close'].shift(1)
-    data['high-low']=abs(data['high']-data['low'])
-    data['high-pc']=abs(data['high']-data['previous_close'])
-    data['low-pc']=abs(data['low']-data['previous_close'])
-    tr=data[['high-low','high-pc','low-pc']].max(axis=1)
-    return tr
-def atr(data, period):
-    data['tr']=tr(data)
-    atr=data['tr'].rolling(period).mean()
-    return atr
-def supertrend(df,period=7,atr_multiplier=3):
-    hl2=(df['high']+df['low'])/2
-    df['atr']=atr(df, period)
-    df['upperband']=hl2+(atr_multiplier*df['atr'])
-    df['lowerband']=hl2-(atr_multiplier*df['atr'])
-    df['in_uptrend']=True
-    for current in range(1,len(df.index)):
-        previous=current-1
-        if df['close'][current]>df['upperband'][previous]:
-            df['in_uptrend'][current]=True
-        elif df['close'][current]<df['lowerband'][previous]:
-            df['in_uptrend'][current]=False
-        else:
-            df['in_uptrend'][current]=df['in_uptrend'][previous]
-            if df['in_uptrend'][current] and df['lowerband'][current]<df['lowerband'][previous]:
-                df['lowerband'][current]=df['lowerband'][previous]
-            if not df['in_uptrend'][current] and df['upperband'][current]>df['upperband'][previous]:
-                df['upperband'][current]=df['upperband'][previous]
-    return df
+perc=float(input("Enter percentage of desired markup: "+"%"))
+markup=1+perc/100
+
 #Analysis & decision making
 def check_buy_sell_signals(df):
     global in_position,order_size,ticker,timeframe,trade_amount,min_sell_price,markup
@@ -83,18 +86,18 @@ def check_buy_sell_signals(df):
                   'Quantity:'+order['info']['executedQty'],
                   'Type:'+order['info']['side'])
             in_position = False
-            print('Sold @',str(order['trades'][0]['info']['price']),'and we gained ',str(float(1-order['trades'][0]['info']['price']/min_sell_price)),'%')
+            print('Sold @',str(order['trades'][0]['info']['price']),', Loss/gain ',str(1-float(1-order['trades'][0]['info']['price'])/min_sell_price),'%.')
         else:
             print("Did not find an opportunity to sell, no task.")  
+
 def run_bot():
-    book=[]
     print(f"\nFetching new bars for {datetime.now(tzlocal()).isoformat()}")
     print("In position:", in_position,";\nTimeframe: ",timeframe,"\n")
     bars = exchange.fetch_ohlcv(f'{ticker}', timeframe=timeframe, limit=100)
     df = pd.DataFrame(bars[:-1], columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
     df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms').dt.tz_localize(None)
     supertrend_data = supertrend(df)
-    check_buy_sell_signals(supertrend_data)
+    check_buy_sell_signals(supertrend_data,in_position,order_size,ticker,timeframe,min_sell_price,markup)
     bal = pd.DataFrame(exchange.fetch_balance()['info']['balances'])
     bal['free'] = pd.to_numeric(bal['free'])
     bal = bal[bal.free!=0].drop(columns='locked').reset_index(drop=True)
@@ -102,10 +105,7 @@ def run_bot():
     print("\nBalance: $",bal*bars[-1][1],", Position:",bal)
     print("Minimum sell price:",min_sell_price,", Order size:",order_size)
     print(name,"'s Markup set to:",markup,"%")
-    book.append({'time':datetime.now(tzlocal()).isoformat(),'close':df['close'][len(df)-1],'balance':bal*bars[-1][1],'position':bal})
-    book=pd.DataFrame(book)
-    book.to_csv(f'{tick}_book.csv',index=False)
-schedule.every(randint(200,299)).seconds.do(run_bot)
+schedule.every(randint(800,900)).seconds.do(run_bot)
 while True:
     schedule.run_pending()
     time.sleep(1)
