@@ -42,9 +42,3 @@ That is, it is to be developed with "plug-and-play" design in order to develop d
 Once the trade signal is sent, the execution class with send the order to Binance.US via ccxt.exchange. For this execution to work, the user will need to verify their identity at CryBot startup.
 
 Relax, have fun, and don't forget to drink plenty of water! :tada::rocket::full_moon:
-
-
-### Backtest 
-
-Here's a snapshot of supertrend's performance on DOGE from 10-07-2020 to 12-31-2020
-![Test Image 1](doge_supertrend.jpg)
