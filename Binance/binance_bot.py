@@ -97,7 +97,7 @@ def run_bot():
     df = pd.DataFrame(bars[:-1], columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
     df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms').dt.tz_localize(None)
     supertrend_data = supertrend(df)
-    check_buy_sell_signals(supertrend_data,in_position,order_size,ticker,timeframe,min_sell_price,markup)
+    check_buy_sell_signals(supertrend_data)
     bal = pd.DataFrame(exchange.fetch_balance()['info']['balances'])
     bal['free'] = pd.to_numeric(bal['free'])
     bal = bal[bal.free!=0].drop(columns='locked').reset_index(drop=True)
