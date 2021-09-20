@@ -47,8 +47,8 @@ def supertrend(df, period=7, atr_multiplier=3):
 #Instance parameters
 name=input("Enter name: ")
 tick=input("Insert ticker: ")
-ticker=tick+"/"+input("USD or USDT?")
-timeframe="5m" #1m,5m,15m,30m,1h,2h,6h,1d
+ticker=tick+"/"+input("USD or USDT?: ")
+timeframe=input("Options are 1m,5m,15m,30m,1h,2h,6h,1d: ")
 order_size = float(input("Order size in "+tick+": "))
 in_position = ast.literal_eval(input("Already in position? - True/False: ").capitalize())
 min_sell_price=float(input("Minimum sell price: "))
